@@ -126,7 +126,7 @@ public class StreamingJava {
                     e.printStackTrace();
                 }
                 return null;
-            }).sorted((a,b) -> b.InvoiceDate.compareTo(a.InvoiceDate));
+            }).sorted(Comparator.comparing(NaturalGasBilling::InvoiceDate).reversed());
         }
 
         // Aufgabe 3) e)
@@ -205,6 +205,7 @@ public class StreamingJava {
     // Aufgabe 3) h)
     public static Stream<File> findFilesWith(String dir, String startsWith, String endsWith, int maxFiles) throws IOException {
         return Files.walk(Paths.get(dir))
+                .parallel()
                 .filter(x -> x.getFileName().toString().startsWith(startsWith))
                 .filter(x -> x.getFileName().toString().endsWith(endsWith))
                 .limit(maxFiles)
@@ -287,7 +288,7 @@ public class StreamingJava {
         stream = fileLines(path);
         countCleanEnergyLevy(stream);
 
-        // 3d) // wie Comparator.comparing ???
+        // 3d)
         System.out.println("\n3d)");
         stream = fileLines(path);
         NaturalGasBilling.orderByInvoiceDateDesc(stream).forEach(System.out::println);
@@ -313,18 +314,13 @@ public class StreamingJava {
         Stream<NaturalGasBilling> outnaturalgasbillingstream = NaturalGasBilling.orderByInvoiceDateDesc(outstringstream);
         Stream<Byte> outbytestream = NaturalGasBilling.serialize(outnaturalgasbillingstream);
 
-        outbytestream.forEach(System.out::print);
-
-        outstringstream = fileLines("data\\NaturalGasBilling.csv");
-        outnaturalgasbillingstream = NaturalGasBilling.orderByInvoiceDateDesc(outstringstream);
-        outbytestream = NaturalGasBilling.serialize(outnaturalgasbillingstream);
-
         String headers = "Invoice Date,From Date,To Date,Billing Days,Billed GJ,Basic charge,Delivery charges,Storage and transport,Commodity charges,Tax,Clean energy levy,Carbon tax,Amount";
         byte[] headerbytes = headers.getBytes(StandardCharsets.UTF_8);
         dos_stm.write(headerbytes);
 
         outbytestream.forEach(x -> {
             try {
+                System.out.print(x);
                 dos_stm.writeByte((int) x);
             } catch (IOException ex) {
                 ex.printStackTrace();
