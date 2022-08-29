@@ -64,21 +64,26 @@ public class StreamingJava {
                 .lines()
                 .sequential()
                 .skip(1)
-                .onClose(() -> {System.out.println("Stream closed");}); // Konsolenausgabe bei Schließen von Stream geht nicht
+                .onClose(() -> System.out.println("Stream closed")); // Konsolenausgabe bei Schließen von Stream geht nicht
     }
 
     // Aufgabe 3) b)
     public static double averageCost(Stream<String> lines) {
-        double res = lines.flatMap(x -> Stream.of(x.split(",")).skip(12)).mapToDouble(Double::parseDouble).average().orElseThrow();
-        System.out.println("3b) " + res);
-        return res;
+        return lines
+                .flatMap(x -> Stream.of(x.split(",")).skip(12))
+                .mapToDouble(Double::parseDouble)
+                .average()
+                .orElseThrow();
     }
 
     // Aufgabe 3) c)
     public static long countCleanEnergyLevy(Stream<String> stream) {
-        long l = stream.flatMap(x -> Stream.of(x.split(",")).skip(10).limit(1).filter(s -> s.equals("0") || s.equals(""))).count();
-        System.out.println("3c) " + l);
-        return l;
+        return stream
+                .flatMap(x -> Stream.of(x.split(","))
+                .skip(10)
+                .limit(1)
+                .filter(s -> s.equals("0") || s.equals("")))
+                .count();
     }
 
     // Aufgabe 3) d)
@@ -103,25 +108,29 @@ public class StreamingJava {
 
         public static Stream<NaturalGasBilling> orderByInvoiceDateDesc(Stream<String> stream) {
             return stream.map(x -> {
-                double cleanEnergyLevy = 0L;
+
+                // für den Fall, dass CleanEnergyLevy = null in der .csv-Datei
+                double cleanEnergyLevy = 0d;
                 if (!x.split(",")[10].equals("")) {
                     cleanEnergyLevy = Double.parseDouble(x.split(",")[10]);
                 }
+
+                // record erstellen
                 try {
                     return new NaturalGasBilling(
-                        new SimpleDateFormat("yyyy-MM-dd").parse(x.split(",")[0]),
-                        new SimpleDateFormat("yyyy-MM-dd").parse(x.split(",")[1]),
-                        new SimpleDateFormat("yyyy-MM-dd").parse(x.split(",")[2]),
-                        Integer.parseInt(x.split(",")[3]),
-                        Double.parseDouble(x.split(",")[4]),
-                        Double.parseDouble(x.split(",")[5]),
-                        Double.parseDouble(x.split(",")[6]),
-                        Double.parseDouble(x.split(",")[7]),
-                        Double.parseDouble(x.split(",")[8]),
-                        Double.parseDouble(x.split(",")[9]),
-                        cleanEnergyLevy,
-                        Double.parseDouble(x.split(",")[11]),
-                        Double.parseDouble(x.split(",")[12]));
+                        new SimpleDateFormat("yyyy-MM-dd").parse(x.split(",")[0]), // InvoiceDate
+                        new SimpleDateFormat("yyyy-MM-dd").parse(x.split(",")[1]), // FromDate
+                        new SimpleDateFormat("yyyy-MM-dd").parse(x.split(",")[2]), // ToDate
+                        Integer.parseInt(x.split(",")[3]), // BillingDays
+                        Double.parseDouble(x.split(",")[4]), // BilledGJ
+                        Double.parseDouble(x.split(",")[5]), // BasicCharge
+                        Double.parseDouble(x.split(",")[6]), // DeliveryCharges
+                        Double.parseDouble(x.split(",")[7]), // StorageAndTransport
+                        Double.parseDouble(x.split(",")[8]), // CommodityCharges
+                        Double.parseDouble(x.split(",")[9]), // Tax
+                        cleanEnergyLevy, // CleanEnergyLevy
+                        Double.parseDouble(x.split(",")[11]), // CarbonTax
+                        Double.parseDouble(x.split(",")[12])); // Amount
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
@@ -133,26 +142,20 @@ public class StreamingJava {
         // TODO: Implement object method: "Stream<Byte> toBytes()" for record "NaturalGasBilling".
         public Stream<Byte> toBytes() throws IOException {
             return Stream.of(
-                    "\n",
-                    this.InvoiceDate.getYear()+1900, "-",
-                    String.format("%02d", this.InvoiceDate.getMonth()+1), "-",
-                    this.InvoiceDate.getDate(), ",",
-                    this.FromDate.getYear()+1900, "-",
-                    String.format("%02d", this.FromDate.getMonth()+1), "-",
-                    this.FromDate.getDate(), ",",
-                    this.ToDate.getYear()+1900, "-",
-                    String.format("%02d", this.ToDate.getMonth()+1), "-",
-                    this.ToDate.getDate(), ",",
-                    this.BillingDays, ",",
-                    this.BilledGJ, ",",
-                    this.BasicCharge, ",",
-                    this.DeliveryCharges, ",",
-                    this.StorageAndTransport, ",",
-                    this.CommodityCharges, ",",
-                    this.Tax, ",",
-                    this.CleanEnergyLevy, ",",
-                    this.CarbonTax, ",",
-                    this.Amount)
+                        "\n",
+                        this.InvoiceDate.getYear()+1900, "-", String.format("%02d", this.InvoiceDate.getMonth()+1), "-", this.InvoiceDate.getDate(), ",",
+                        this.FromDate.getYear()+1900, "-", String.format("%02d", this.FromDate.getMonth()+1), "-", this.FromDate.getDate(), ",",
+                        this.ToDate.getYear()+1900, "-", String.format("%02d", this.ToDate.getMonth()+1), "-", this.ToDate.getDate(), ",",
+                        this.BillingDays, ",",
+                        this.BilledGJ, ",",
+                        this.BasicCharge, ",",
+                        this.DeliveryCharges, ",",
+                        this.StorageAndTransport, ",",
+                        this.CommodityCharges, ",",
+                        this.Tax, ",",
+                        this.CleanEnergyLevy, ",",
+                        this.CarbonTax, ",",
+                        this.Amount)
                     .map(Object::toString)
                     .map(String::chars)
                     .flatMap(x -> x.mapToObj(y -> (byte) y));
@@ -215,7 +218,7 @@ public class StreamingJava {
     public static void main(String[] args) throws Exception {
 
         System.out.println("");
-
+        /*
         // 2a)
         List<Integer> e1 = new ArrayList<>();
         e1.add(1);
@@ -274,19 +277,20 @@ public class StreamingJava {
         System.out.print("2f) Array: " + Arrays.toString(sarr) + " || makeStreamOf: ");
         makeStreamOf(sarr).forEach(System.out::print);
         System.out.println();
-
+        */
         // 3a)
         String path = "data\\NaturalGasBilling.csv";
-        System.out.println("3a) ");
+        System.out.println("3a)");
         Stream<String> stream = fileLines(path);
+        stream.close();
 
         // 3b)
         stream = fileLines(path);
-        averageCost(stream);
+        System.out.println("\n3b)\n" + averageCost(stream));
 
         // 3c)
         stream = fileLines(path);
-        countCleanEnergyLevy(stream);
+        System.out.println("\n3c)\n" + countCleanEnergyLevy(stream));
 
         // 3d)
         System.out.println("\n3d)");
